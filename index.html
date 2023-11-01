@@ -1,0 +1,122 @@
+<head>
+  <title>Fresho.dev Ads Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Alpine JS -->
+  <script src="//unpkg.com/alpinejs" defer></script>
+
+  <!-- Mancha JS -->
+  <script src="//unpkg.com/mancha" defer></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+<body class="bg-gray-100" x-data="{ name: '', description: '', audience: '', location: '', loading: false }">
+
+  <!-- Product Form -->
+  <div class="px-3 py-4 flex justify-center">
+    <div class="w-full max-w-md">
+      <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 leading-tight"
+        @submit.prevent="loading = true; generate({name: name, description: description, audience: audience, location: location})">
+
+        <div class="mb-4">
+          <label class="block text-sm font-bold mb-2" for="name">Product Name</label>
+          <input class="shadow appearance-none border rounded w-full py-2 px-3 focus:outline-none" id="name" type="text"
+            placeholder="Leanback Pro 2000" x-model="name" required>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-bold mb-2" for="description">Product Description</label>
+          <textarea class="shadow appearance-none border rounded w-full py-2 px-3 focus:outline-none" id="description"
+            rows="2" placeholder="Genuine leather recliner chair with cupholder" x-model="description" s
+            required></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-bold mb-2">Audience</label>
+          <div class="flex flex-wrap"
+            x-data="{ audiences: ['parents', 'students', 'office workers', 'fitness enthusiasts']}">
+            <template x-for="segment in audiences">
+              <label class="whitespace-nowrap p-1">
+                <input type="radio" name="segment" :value="segment" x-model="audience" required>
+                <span x-text="segment"></span>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-bold mb-2">Location</label>
+          <div class="flex flex-wrap" x-data="{ locations: ['New York', 'Seattle', 'San Francisco', 'Miami']}">
+            <template x-for="place in locations">
+              <label class="whitespace-nowrap p-1">
+                <input type="radio" name="location" :value="place" x-model="location" @click="" required>
+                <span x-text="place"></span>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div class="">
+          <input class="p-2 border rounded bg-emerald-200" type="submit" value="Generate Ad">
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Ads Template -->
+  <template id="ad-template">
+    <div class="bg-white p-2 max-w-lg text-sm leading-4 font-sans font-normal">
+      <h3 class="text-[#4F7ABE]">{{title}}</h3>
+      <span class="text-[#13A365]">{{url}}</span>
+      <p>{{body}}</p>
+    </div>
+  </template>
+
+  <!-- Ads Slot -->
+  <div class="px-3 py-2 flex justify-center">
+    <div id="ad" class="w-full max-w-lg">
+      <div role="status" class="flex justify-center" x-show="loading">
+        <img class="h-8 w-8" src="https://i.gifer.com/VAyR.gif" alt="Loading">
+      </div>
+    </div>
+  </div>
+</body>
+
+<script type="text/javascript">
+
+  const preamble = '' +
+    'Pretend that you are a marketing especialist who is trying to generate an ad for your product.' +
+    'The product name is <<{{name}}>> and the description of the product is <<{{description}}>>. The' +
+    'ad needs to be personalized for the audience segment <<{{audience}}>> and the location' +
+    '<<{{location}}>>';
+  const promptTitle = '' +
+    `${preamble}. The ad title must be less than 10 words. Title: \n\n`;
+  const promptContent = '' +
+    `${preamble}. Explain why the product is a good fit for the audience and  location. The ad ` +
+    `content must be less than 30 words. Content: \n\n`;
+
+  async function generate({ provider = 'openai', model = 'gpt-4', ...data }) {
+    const urlBase = new URL(`https://functions.fresho.workers.dev/genai/${provider}/completion.txt`);
+    urlBase.searchParams.set('model', model);
+
+    const urlTitle = new URL(urlBase);
+    urlTitle.searchParams.set('prompt', Mancha.preprocess(promptTitle, data));
+    const title = await fetch(urlTitle)
+      .then(res => res.text())
+      .then(txt => txt.replace(/[\"\*\n]/g, '').split(' ').slice(0, 10).join(' '));
+
+    const urlContent = new URL(urlBase);
+    urlContent.searchParams.set('prompt', Mancha.preprocess(promptContent, data));
+    const content = await fetch(urlContent)
+      .then(res => res.text())
+      .then(txt => txt.replace(/[\"\*\n]/g, '').split(' ').slice(0, 30).join(' '));
+
+    const ad = document.getElementById('ad');
+    const adTemplate = document.getElementById('ad-template').innerHTML;
+    ad.innerHTML = Mancha.preprocess(adTemplate, { title: title, body: content, url: 'https://fresho.dev/marketplace' });
+  }
+</script>
