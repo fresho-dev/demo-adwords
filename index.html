@@ -10,6 +10,9 @@
   <!-- Mancha JS -->
   <script src="//unpkg.com/mancha" defer></script>
 
+  <!-- Papa Parse JS -->
+  <script src="//unpkg.com/papaparse@latest/papaparse.min.js"></script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -36,16 +39,15 @@
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-bold mb-2">Audience</label>
-          <div class="flex flex-wrap"
-            x-data="{ audiences: ['parents', 'students', 'office workers', 'fitness enthusiasts']}">
+          <label class="block text-sm font-bold mb-2">Audience Affinity</label>
+          <select
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            x-data="{audiences: []}" x-init="audiences = await loadAudiences()" x-model="audience">
             <template x-for="segment in audiences">
-              <label class="whitespace-nowrap p-1">
-                <input type="radio" name="segment" :value="segment" x-model="audience" required>
-                <span x-text="segment"></span>
-              </label>
+              <option name="audience" :value="segment" x-text="segment"></option>
             </template>
-          </div>
+          </select>
+
         </div>
 
         <div class="mb-4">
@@ -89,10 +91,16 @@
 
 <script type="text/javascript">
 
+  async function loadAudiences() {
+    const text = await fetch('affinity_categories.csv').then(res => res.text());
+    const data = await new Promise(resolve => Papa.parse(text, { header: true, complete: resolve }));
+    return data.data.filter(row => row['Search'] === 'YES').map(row => row['Segment name']);
+  }
+
   const preamble = '' +
-    'Pretend that you are a marketing especialist who is trying to generate an ad for your product.' +
-    'The product name is <<{{name}}>> and the description of the product is <<{{description}}>>. The' +
-    'ad needs to be personalized for the audience segment <<{{audience}}>> and the location' +
+    'Pretend that you are a marketing especialist who is trying to generate an ad for your product. ' +
+    'The product name is <<{{name}}>> and the description of the product is <<{{description}}>>. The ' +
+    'ad needs to be personalized for the audience segment <<{{audience}}>> and the location ' +
     '<<{{location}}>>';
   const promptTitle = '' +
     `${preamble}. The ad title must be less than 10 words. Title: \n\n`;
